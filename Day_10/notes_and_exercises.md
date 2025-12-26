@@ -4,11 +4,10 @@
 By the end of Day 10, you will:
 - Understand and manage environment variables
 - Create and manage shell aliases
-- Customize shell prompts and behavior
 - Configure shell startup files
 - Create useful shell functions
 
-**Estimated Time:** 2-3 hours
+**Estimated Time:** 30 mins
 
 ## Notes
 - **Why Customize Your Shell?**
@@ -16,6 +15,7 @@ By the end of Day 10, you will:
   - Essential for DevOps, SRE, and power users.
 
 - **Environment Variables:**
+  - Environment variables in Linux are dynamic named values stored in the system's memory that influence how processes, shells, and applications behave. They're essentially key-value pairs (e.g., PATH=/usr/bin:/bin) that provide configuration data, like paths to executables or user-specific settings, without hardcoding them into scripts or programs
   - Store configuration and session info (e.g., PATH, HOME, USER, SHELL).
   - View all: `printenv` or `env`
   - View one: `echo $PATH`
@@ -38,49 +38,63 @@ By the end of Day 10, you will:
 
 - **Shell Customization:**
   - Edit `~/.bashrc`, `~/.bash_profile`, or `~/.zshrc` for custom settings
-  - Customize prompt: `PS1='\u@\h:\w$ '`
   - Add functions: e.g., `mkcd() { mkdir -p "$1" && cd "$1"; }`
   - Source file to apply changes: `source ~/.bashrc`
 
-```mermaid
-flowchart TD
-    A[Shell Customization] --> B[Environment Variables]
-    A --> C[Aliases]
-    A --> D[Functions]
-    A --> E[Prompt Customization]
-    
-    B --> B1[export PATH=$PATH:/new/path]
-    B --> B2[export EDITOR=vim]
-    
-    C --> C1[alias ll='ls -la']
-    C --> C2[alias gs='git status']
-    
-    D --> D1[mkcd function]
-    D --> D2[backup function]
-    
-    E --> E1[PS1 customization]
-    E --> E2[Color prompts]
-    
-    F[Configuration Files] --> F1[~/.bashrc]
-    F --> F2[~/.bash_profile]
-    F --> F3[~/.zshrc]
-    
-    B1 --> G[source ~/.bashrc]
-    C1 --> G
-    D1 --> G
-    E1 --> G
-    
-    style A fill:#f96
-    style G fill:#9f6
-```
+### Top Shell Customization Commands
 
-- **Best Practices:**
-  - Keep customizations under version control (e.g., dotfiles repo)
-  - Comment your aliases and functions
-  - Avoid overriding critical commands (e.g., `rm`)
-  - Test changes in a new shell before making permanent
+| Command | Simple Description | Examples |
+|---------|--------------------|----------|
+| **EXPORT**<br>`$ export VAR=value` | Set an environment variable (session or permanent). | 1. Set: `export MYAPP=/opt/myapp`<br>2. View: `echo $MYAPP`<br>3. PATH add: `export PATH="$PATH:~/shell_custom_test/scripts"` |
+| **PRINTENV**<br>`$ printenv [VAR]` | List all or specific environment variables. | 1. All: `printenv`<br>2. One: `printenv PATH`<br>3. Env all: `env` (alternative) |
+| **UNSET**<br>`$ unset VAR` | Remove an environment variable from session. | 1. Remove: `unset MYAPP`<br>2. Verify: `echo $MYAPP` (empty)<br>3. Multiple: `unset VAR1 VAR2` |
+| **ALIAS**<br>`$ alias name='cmd'` | Create shortcut for a command. | 1. Create: `alias ll='ls -la'`<br>2. List: `alias`<br>3. Remove: `unalias ll` |
+| **SOURCE**<br>`$ source ~/.bashrc` | Reload shell config file to apply changes. | 1. Reload: `source ~/.bashrc`<br>2. Short: `. ~/.bashrc`<br>3. Test: Add alias, source, then use it
 
+### Environment Variables
+**Concept:** Key-value pairs that configure your shell session (e.g., PATH for command search). Local to session unless exported/permanent.
 
+**Step-by-Step:**
+1. View current vars: `printenv | grep PATH` (shows your PATH); `echo $HOME` (shows home dir).
+2. Set temporary var: `export MYTEST="Hello World"` (session-only); `echo $MYTEST` (displays value).
+3. Add to PATH: `export PATH="$PATH:~/shell_custom_test/scripts"`; `test.sh` (runs your sample script—proves PATH works); `echo $PATH` (verify addition).
+4. Remove var: `unset MYTEST`; `echo $MYTEST` (empty now).
+5. Make permanent: `echo 'export MYAPP="permanent value"' >> ~/.bashrc`; `source ~/.bashrc`; `echo $MYAPP` (persists in new terminals).
+6. (Optional) System-wide: `sudo nano /etc/environment` (add `MYGLOBAL=value`), then log out/in.
+
+**Tips:** Use `env | grep VAR` for quick search. Avoid overwriting PATH—always append (`$PATH:...`).
+
+---
+
+### Aliases
+**Concept:** Shortcuts for long/frequent commands (e.g., ll for ls -la). Non-interactive, expand on use.
+
+**Step-by-Step:**
+1. Create temporary alias: `alias ll='ls -la'`; `ll` (lists detailed—shortcut works).
+2. List aliases: `alias` (shows all, including ll).
+3. Create another: `alias gs='git status'` (if Git installed); `gs` (runs git status).
+4. Remove: `unalias ll`; `ll` (now errors—original ls runs).
+5. Make permanent: `echo "alias ll='ls -la'" >> ~/.bashrc`; `echo "alias gs='git status'" >> ~/.bashrc`; `source ~/.bashrc`; open new terminal, `ll` (persists).
+6. (Optional) Advanced: `alias rm='rm -i'` (prompts before delete—safety).
+
+**Tips:** Bypass alias: `command ls` or `\ls`. Comment in ~/.bashrc: `# My ls alias: alias ll='ls -la'`.
+
+---
+
+### Shell Functions
+**Concept:** Mini-scripts in your shell (like aliases but with logic/loops). Defined in config files.
+
+**Step-by-Step:**
+1. Create temporary function: `mkcd() { mkdir -p "$1" && cd "$1"; }`; `mkcd newdir` (creates/enters newdir).
+2. Test: `pwd` (shows /home/user/newdir); `cd ~` (back home).
+3. Another function: `backup() { cp "$1" "$1.backup.$(date +%Y%m%d_%H%M%S)"; echo "Backed up!"; }`; `backup ~/shell_custom_test/scripts/test.sh` (creates timestamped copy).
+4. List functions: `declare -f | grep mkcd` (shows definition).
+5. Make permanent: `echo 'mkcd() { mkdir -p "$1" && cd "$1"; }' >> ~/.bashrc`; `echo 'backup() { cp "$1" "$1.backup.$(date +%Y%m%d_%H%M%S)"; echo "Backed up!"; }' >> ~/.bashrc`; `source ~/.bashrc`.
+6. (Optional) Extract function: Add the `extract()` from notes to ~/.bashrc, source, `extract file.zip` (unzips).
+
+**Tips:** Use `$1` for first arg, `$@` for all. Test: `type mkcd` (shows it's a function).
+
+---
 
 ## Sample Exercises
 1. Add a directory to your PATH and verify it works.
@@ -117,68 +131,6 @@ flowchart TD
   - `/etc/profile`: System-wide profile
   - `/etc/bash.bashrc`: System-wide bashrc
 
-## Sample Exercises
-1. Add a directory to your PATH and verify it works.
-2. Create an alias for a long command you use often.
-3. Write a shell function to create and enter a directory in one step.
-4. Change your shell prompt to show the current directory and username.
-5. Make an environment variable permanent for all future sessions.
-6. Create a function to quickly backup files with timestamps.
-7. Set up a custom prompt with colors and git branch information.
-
-## Solutions
-1. **Add to PATH:**
-   ```bash
-   export PATH="$PATH:/my/new/dir"
-   echo 'export PATH="$PATH:/my/new/dir"' >> ~/.bashrc
-   source ~/.bashrc
-   ```
-
-2. **Create alias:**
-   ```bash
-   alias ll='ls -alF'
-   alias gs='git status'
-   alias la='ls -la'
-   echo "alias ll='ls -alF'" >> ~/.bashrc
-   ```
-
-3. **Shell function:**
-   ```bash
-   mkcd() { mkdir -p "$1" && cd "$1"; }
-   echo 'mkcd() { mkdir -p "$1" && cd "$1"; }' >> ~/.bashrc
-   ```
-
-4. **Custom prompt:**
-   ```bash
-   export PS1='\u@\h:\w$ '
-   # With colors:
-   export PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ '
-   ```
-
-5. **Permanent environment variable:**
-   ```bash
-   echo 'export MYVAR="myvalue"' >> ~/.bashrc
-   source ~/.bashrc
-   echo $MYVAR
-   ```
-
-6. **Backup function:**
-   ```bash
-   backup() {
-       cp "$1" "$1.backup.$(date +%Y%m%d_%H%M%S)"
-       echo "Backup created: $1.backup.$(date +%Y%m%d_%H%M%S)"
-   }
-   ```
-
-7. **Advanced prompt with git:**
-   ```bash
-   # Add to ~/.bashrc
-   parse_git_branch() {
-       git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
-   }
-   export PS1='\u@\h:\w\[\033[32m\]$(parse_git_branch)\[\033[00m\]$ '
-   ```
-
 ## Sample Interview Questions
 1. What is the difference between a shell variable and an environment variable?
 2. How do you make an environment variable available to all child processes?
@@ -210,32 +162,6 @@ flowchart TD
 - [ ] Can write and use shell functions
 - [ ] Understand shell configuration files
 - [ ] Can make changes permanent
-
-## Key Commands Summary
-```bash
-# Environment variables
-export VAR=value                 # Set environment variable
-echo $VAR                        # Display variable
-unset VAR                        # Remove variable
-printenv                         # List all variables
-
-# Aliases
-alias name='command'             # Create alias
-alias                            # List all aliases
-unalias name                     # Remove alias
-
-# Shell configuration
-source ~/.bashrc                 # Reload configuration
-echo 'config' >> ~/.bashrc      # Add to config file
-```
-
-## Best Practices
-- Keep customizations in version control (dotfiles repo)
-- Comment your aliases and functions
-- Test changes before making permanent
-- Avoid overriding system commands
-- Use meaningful names for variables and functions
-- Backup configuration files before major changes
 
 ## Next Steps
 Proceed to [Day 11: Pipes, Redirects, Wildcards, and Links](../Day_11/notes_and_exercises.md) to master command chaining and I/O redirection.

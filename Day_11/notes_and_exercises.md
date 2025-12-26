@@ -8,111 +8,116 @@ By the end of Day 11, you will:
 - Create and manage hard and symbolic links
 - Build powerful command combinations
 
-**Estimated Time:** 3-4 hours
+**Estimated Time:** 30 mins
 
-## Notes
-- **Why These Tools Matter:**
+## Sample Environment Setup
+Exercises are local, no VMs needed. Use your local machine (e.g., Ubuntu/Mac with Bash).
+```
+mkdir -p ~/day11_test/{logs,scripts,docs}
+echo "Line 1: Normal" > ~/day11_test/logs/log1.txt
+echo "Line 2: ERROR here" >> ~/day11_test/logs/log1.txt
+echo "Line 3: Normal" >> ~/day11_test/logs/log1.txt
+echo "Line 4: WARNING" >> ~/day11_test/logs/log1.txt
+touch ~/day11_test/docs/{file1.txt,file2.txt,log1.log,log2.log}
+echo '#!/bin/bash\necho "Test script"' > ~/day11_test/scripts/test.sh
+chmod +x ~/day11_test/scripts/test.sh
+
+# View initial state
+ls -la ~/day11_test/
+cat ~/day11_test/logs/log1.txt
+```
+
+## Why These Tools Matter:
   - Essential for chaining commands, automating tasks, and flexible file management in Linux.
   - Mastery is expected for DevOps, SRE, and system engineering roles.
 
-```mermaid
-flowchart LR
-    A[Command Input] --> B[Command 1]
-    B -->|Pipe| C[Command 2]
-    C -->|Pipe| D[Command 3]
-    D --> E[Final Output]
-    
-    F[Redirection] --> F1["> Stdout to File"]
-    F --> F2[">> Append to File"]
-    F --> F3["< Input from File"]
-    F --> F4["2> Stderr to File"]
-    F --> F5["&> All Output"]
-    
-    G[Wildcards] --> G1["* Any Characters"]
-    G --> G2["? Single Character"]
-    G --> G3["[] Character Set"]
-    G --> G4["{} Brace Expansion"]
-    
-    H[Links] --> H1["Hard Links<br/>Same Inode"]
-    H --> H2["Symbolic Links<br/>Path Pointer"]
-    
-    I[Pipeline Example] --> J["cat log.txt"]
-    J --> K["grep ERROR"]
-    K --> L["sort"]
-    L --> M["uniq -c"]
-    
-    style A fill:#f96
-    style E fill:#9f6
-    style I fill:#69f
-```
+
+| Command | Simple Description | Examples |
+|---------|--------------------|----------|
+| **PIPE**<br>`$ cmd1 \| cmd2` | Chain commands by passing output as input. | 1. Basic: `ls \| grep txt`<br>2. Chain: `cat log.txt \| grep ERROR \| wc -l`<br>3. Sort: `ps aux \| sort -k1 \| head -5` |
+| **REDIRECT**<br>`$ cmd > file` | Send output/input to/from files (use >> for append, < for input, 2> for stderr). | 1. Overwrite: `ls > files.txt`<br>2. Append: `echo "Log" >> log.txt`<br>3. Both: `cmd > out.txt 2>&1` |
+| **WILDCARD**<br>`$ ls *.txt` | Match files with patterns (glob). | 1. Any: `rm *.tmp`<br>2. Single: `ls file?.log`<br>3. Range: `ls [a-c]*.txt \| wc -l` |
+| **LINK**<br>`$ ln file link` | Create file/directory pointers (hard or sym). | 1. Hard: `ln original hardlink`<br>2. Sym: `ln -s original symlink`<br>3. View: `ls -li \| grep original`
 
 - **Pipes (`|`):**
   - Pass output of one command as input to another.
-  - Example: `cat file.txt | grep error | sort | uniq`
+
+  **Examples:**
+  - Basic pipe: ls ~/day11_test | grep log (lists files, pipes to grep for "log").
+  - Chain: cat ~/day11_test/logs/log1.txt | grep ERROR (cats file, greps errors).
+  - Count: cat ~/day11_test/logs/log1.txt | grep ERROR | wc -l (counts error lines).
+  - Sort/unique: cat ~/day11_test/logs/log1.txt | sort | uniq (sorts, removes duplicates).
+  - Advanced: ps aux | grep bash | awk '{print $2}' (finds bash PIDs).
+---
 
 - **Redirects:**
-  - `>`: Redirect output to file (overwrite)
-  - `>>`: Redirect output to file (append)
-  - `<`: Use file as input
-  - `2>`: Redirect stderr
-  - `2>&1`: Redirect stderr to stdout
-  - Example: `ls > files.txt 2> errors.txt`
+- Redirections change where a command gets its input (stdin) or sends its output (stdout/stderr), letting you save results to files, read from files, or combine streams without extra tools.
 
-- **Wildcards (Globbing):**
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `>` | Redirect stdout to file (overwrite) | `ls > files.txt` (overwrites files.txt with ls output) |
+| `>>` | Redirect stdout to file (append) | `echo "Log" >> log.txt` (adds to end of log.txt) |
+| `<` | Use file as stdin (input) | `grep ERROR < log.txt` (greps content from log.txt) |
+| `2>` | Redirect stderr to file | `ls nonexist 2> errors.txt` (errors to errors.txt) |
+| `2>&1` | Redirect stderr to stdout | `ls nonexist > out.txt 2>&1` (both to out.txt) |
+
+### File Descriptors (Streams): 
+- File descriptors are numbers identifying open streams for a process: 0 for input, 1 for normal output, 2 for errors. Redirections target these for precise control.
+
+| Descriptor | Name | Description |
+|------------|------|-------------|
+| `0` | stdin | Input stream (usually keyboard) |
+| `1` | stdout | Normal output stream (usually screen) |
+| `2` | stderr | Error output stream (usually screen)
+
+**Example:**
+  - Stdout overwrite: ls ~/day11_test > ~/day11_test/files.txt (ls to file).
+  - Append: echo "New line" >> ~/day11_test/files.txt (adds to file).
+  - Input: grep ERROR < ~/day11_test/logs/log1.txt (greps from file).
+  - Stderr: ls nonexist 2> ~/day11_test/errors.txt (errors to file).
+  - Both: ls nonexist > output.txt 2>&1 (stdout + stderr to file).
+  - (Optional) All: command &> all.txt (Bash shorthand for both).
+---
+
+
+- **Wildcards (Globbing):** Wildcards (globbing) expand patterns to match files before command execution: * for any chars, ? for one char, [] for sets.
   - `*`: Any number of characters
   - `?`: Single character
   - `[abc]`: Any one character in set
   - `[a-z]`: Any character in range
-  - Example: `ls *.txt`, `rm file?.log`, `ls [a-c]*`
+  - `![abc]`: Any character other than this
 
-- **Links:**
+  **Examples:**
+  - Any chars: ls ~/day11_test/*.txt (all .txt files).
+  - Single char: ls ~/day11_test/log?.log (log1.log, log2.log).
+  - Set: ls ~/day11_test/[fl]* (files starting f or l).
+  - Range: ls ~/day11_test/file[1-2].txt (file1.txt, file2.txt).
+  - Negate: ls ~/day11_test/!(*.txt) (shopt -s extglob first; non-txt).
+  - (Optional) Brace: touch ~/day11_test/test{1..3}.txt (creates test1.txt etc.).
+---
+
+
+- **Links:** Links create multiple names for files: hard links share data (same inode), symbolic links point to paths (like shortcuts).
   - **Hard Link:** `ln file1 file2` — Same inode, file exists until all links are deleted
   - **Symbolic Link (Symlink):** `ln -s target linkname` — Pointer to another file or directory
   - Use `ls -li` to view inodes and link types
+ 
+  **Examples:**
+  - Create file: echo "Test" > ~/day11_test/original.txt.
+  - Hard link: ln ~/day11_test/original.txt ~/day11_test/hardlink.txt.
+  - Sym link: ln -s ~/day11_test/original.txt ~/day11_test/symlink.txt.
+  - View: ls -li ~/day11_test/*.txt (same inode for hard/original; symlink shows arrow).
+  - Test delete: rm ~/day11_test/original.txt; cat ~/day11_test/hardlink.txt (still works); cat ~/day11_test/symlink.txt (broken).
+  - (Optional) Dir sym: ln -s ~/day11_test/logs ~/day11_test/logs_link.
+  - Tips: ls -l shows symlink arrows. Hard links can't cross filesystems.
+---
+
 
 - **Best Practices:**
   - Use pipes to build powerful one-liners
   - Redirect output to log files for troubleshooting
   - Use wildcards carefully to avoid accidental deletion
   - Prefer symlinks for configs/scripts; use hard links for backup/versioning
-
-
-
-## Sample Exercises
-1. Use pipes to count the number of lines containing "error" in a log file.
-2. Redirect both stdout and stderr of a command to a file.
-3. List all files starting with "test" and ending with ".sh" in a directory.
-4. Create a symbolic link and a hard link for a file, then show the difference.
-5. Use wildcards to delete all `.tmp` files in a directory.
-
-- **Advanced Redirection:**
-  ```bash
-  # File descriptors
-  command 1> stdout.txt 2> stderr.txt    # Separate stdout/stderr
-  command &> all_output.txt              # Both to same file (bash)
-  command > output.txt 2>&1              # Both to same file (POSIX)
-  
-  # Here documents
-  cat << EOF > file.txt
-  Line 1
-  Line 2
-  EOF
-  
-  # Process substitution
-  diff <(sort file1) <(sort file2)       # Compare sorted files
-  ```
-
-- **Advanced Wildcards:**
-  ```bash
-  # Extended globbing (bash)
-  shopt -s extglob
-  ls !(*.txt)                            # All except .txt files
-  ls *.@(jpg|png|gif)                    # Multiple extensions
-  
-  # Brace expansion
-  touch file{1..10}.txt                  # Create file1.txt to file10.txt
-  mkdir -p project/{src,docs,tests}      # Create directory structure
-  ```
 
 ## Sample Exercises
 1. Use pipes to count the number of lines containing "error" in a log file.
@@ -200,34 +205,6 @@ flowchart LR
 - [ ] Know difference between hard and symbolic links
 - [ ] Can build complex command pipelines
 - [ ] Understand file descriptors and advanced redirection
-
-## Key Commands Summary
-```bash
-# Pipes and redirection
-command1 | command2              # Pipe output
-command > file                   # Redirect stdout
-command >> file                  # Append stdout
-command 2> file                  # Redirect stderr
-command &> file                  # Redirect both
-
-# Wildcards
-*.txt                           # All .txt files
-file?.log                       # Single character
-file[0-9].txt                   # Character range
-{1..10}                         # Brace expansion
-
-# Links
-ln target hardlink              # Hard link
-ln -s target symlink            # Symbolic link
-```
-
-## Best Practices
-- Test wildcards with `ls` before using with destructive commands
-- Use quotes to prevent unwanted expansion
-- Prefer symlinks for configuration files and scripts
-- Always check link targets before following
-- Use meaningful names for links
-- Document complex pipelines with comments
 
 ## Next Steps
 Proceed to [Day 12: Compression, Archiving, and Backups](../Day_12/notes_and_exercises.md) to learn data protection and storage optimization.

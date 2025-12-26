@@ -8,107 +8,70 @@ By the end of Day 3, you will:
 - Create and manage symbolic and hard links
 - Understand the purpose of key directories
 
-**Estimated Time:** 2-3 hours
+**Estimated Time:** 30 mins
 
-## Notes
-- **Linux Filesystem Hierarchy**
-  - The Linux filesystem is hierarchical, starting from the root directory `/`.
-  - Each directory has a specific purpose and is standardized by the Filesystem Hierarchy Standard (FHS).
+## What is the Linux Filesystem Hierarchy?
 
+Linux organizes everything under a single tree starting at root / — no drive letters like Windows. The Filesystem Hierarchy Standard (FHS) standardizes it for consistency across distros (Ubuntu, RHEL, etc.). It's a logical blueprint: system files low, user files high.
 
+When you log in, the shell prompt (e.g., `root@ubuntu:/#` or `ubuntu@ip-172-31-xx-xx:~$`) who/where you are — `echo $USER` (user), `hostname`, `pwd` (path). 
+- **User:** First part (root/ubuntu) — root is admin (full access); regular users (e.g., ubuntu on EC2) have limited perms for security. Multiple users share the machine.
+- **Hostname:** Middle (ubuntu/ip-172-... ) — system ID; irrelevant for single machines but key for fleets.
+- **Path:** Last (`/` or `~`) — current dir. `/` is root (file system top); `~` is home (/home/username or /root for root—exception!).
 
 - **Key Directories (Categorized):**
-  - **Essential System Directories:**
-    - `/bin`: Essential user binaries (ls, cp, mv)
-    - `/sbin`: System binaries (administrative commands)
-    - `/lib`, `/lib64`: Essential shared libraries
-    - `/boot`: Boot loader files (kernel, initrd)
-    - `/dev`: Device files
-    - `/etc`: System configuration files
-    - `/proc`: Virtual filesystem for process and kernel info
-    - `/sys`: Virtual filesystem for system info
-    - `/run`: Runtime variable data
-  - **User Data & Home:**
-    - `/home`: User home directories
-    - `/root`: Home directory for root user
-  - **Variable & Temporary Data:**
-    - `/var`: Variable data (logs, mail, spool)
-    - `/tmp`: Temporary files (writable by all users)
-  - **Additional Software & User Programs:**
-    - `/usr`: User programs, libraries, documentation
-    - `/usr/bin`, `/usr/sbin`: Non-essential user/system binaries
-    - `/usr/local`: Locally installed software
-    - `/opt`: Optional/additional software
-  - **Mount Points:**
-    - `/mnt`: Temporary mount point for filesystems
-    - `/media`: Removable media (USB, CD-ROM)
-    - `/srv`: Data for services (web, ftp)
+  ![Linux Fily System](https://github.com/user-attachments/assets/6049edd5-7b9b-44e7-b260-01389b792539)
 
-```mermaid
-graph TD
-    A["/"] --> B["/bin"]
-    A --> C["/sbin"]
-    A --> D["/lib"]
-    A --> E["/etc"]
-    A --> F["/home"]
-    A --> G["/var"]
-    A --> H["/usr"]
-    A --> I["/tmp"]
-    A --> J["/boot"]
-    A --> K["/dev"]
-    A --> L["/proc"]
-    A --> M["/sys"]
-    
-    F --> F1["/home/user1"]
-    F --> F2["/home/user2"]
-    
-    G --> G1["/var/log"]
-    G --> G2["/var/lib"]
-    G --> G3["/var/www"]
-    
-    H --> H1["/usr/bin"]
-    H --> H2["/usr/lib"]
-    H --> H3["/usr/local"]
-    
-    style A fill:#f9f,stroke:#333,stroke-width:4px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style E fill:#bbf,stroke:#333,stroke-width:2px
-    style F fill:#bfb,stroke:#333,stroke-width:2px
-```
+- **/bin:** Essential user binaries (ls, cp, mv), non-admin, accessible to all.
+- **/sbin:** System binaries (administrative commands), admin-only for managing users/groups.
+- **/lib, /lib64:** Essential libraries for kernel/system calls.
+- **/boot:** Boot loader files (kernel, initrd), used on restarts.
+- **/dev:** Device files.
+- **/etc:** System configuration files.
+- **/proc:** Virtual filesystem for process and kernel info.
+- **/sys:** Virtual filesystem for system info.
+- **/run:** Runtime variable data.
 
-- **File Types in Linux:**
+#### User Data & Home
+- **/home:** User home directories (/home/linuxthefinalboss)—personal; /root for root (exception).
+- **/root:** Home directory for root user.
+
+#### Variable & Temporary Data
+- **/var:** Variable data (logs, mail, spool)—logs (/var/log for Apache/HTTPD), libs (/var/lib), cache (/var/cache).
+- **/tmp:** Temporary files (writable by all users)—auto-cleaned (like recently deleted photos).
+
+#### Additional Software & User Programs
+- **/usr:** User programs, libraries, documentation (/usr/bin apps like curl, /usr/lib libs, /usr/local local installs)—/bin shortcut to /usr/bin.
+- **/usr/bin, /usr/sbin:** Non-essential user/system binaries.
+- **/usr/local:** Locally installed software.
+- **/opt:** Optional/additional software (e.g., Java versions) — common for org tools.
+
+#### Mount Points
+- **/mnt:** Temporary mount point for filesystems (manual, e.g., NFS).
+- **/media:** Removable media (USB, CD-ROM)—auto.
+- **/srv:** Data for services (web, ftp)—for sharing.
+
+
+## File Types in Linux:
+Linux treats everything as files even devices (/dev/null swallows output). Identify with ls -l (first char) or the file command.
+
+### Common Types -
   - Regular files: Text, binary, scripts, etc.
   - Directories: Folders containing files
   - **Symbolic links (symlinks):** Pointers to other files or directories. Created with `ln -s`. Can span filesystems. If the target is deleted, the symlink is broken (dangling link).
   - **Hard links:** Additional directory entries for a file. Created with `ln`. Share the same inode as the original file. Cannot span filesystems or link to directories. File is only deleted when all hard links are removed.
-  - Device files: Represent hardware (block/character devices)
+  - Device files:
+    1. Block (b): Storage (e.g., /dev/sda—disks).
+    2. Character (c): Streams (e.g., /dev/tty—keyboard).
   - Named pipes (FIFOs): For inter-process communication
   - Sockets: For network communication
 
-  | Feature         | Symbolic Link (symlink) | Hard Link           |
-  |-----------------|------------------------|---------------------|
-  | Command         | ln -s target linkname  | ln target linkname  |
-  | Inode           | New inode              | Same as original    |
-  | Cross-filesystem| Yes                    | No                  |
-  | Directories     | Yes (with -s)          | No                  |
-  | If target gone  | Dangling (broken)      | File remains        |
-
-```mermaid
-graph LR
-    A[file.txt<br/>inode: 12345] 
-    B[hardlink.txt<br/>inode: 12345]
-    C[symlink.txt<br/>inode: 67890]
-    
-    A -.-> D[Same Inode]
-    B -.-> D
-    C --> A
-    
-    style A fill:#bfb
-    style B fill:#bfb
-    style C fill:#fbb
-    style D fill:#fff,stroke-dasharray: 5 5
-```
-
+- **Navigating the Filesystem:**
+  - `cd <dir>`: Change directory
+  - `ls`: List directory contents
+  - `pwd`: Print working directory
+  - `tree`: Visualize directory structure (may need to install)
+ 
 - **Commands to Identify File Types:**
   - `ls -l`: Shows file type in first character:
     - `-` Regular file
@@ -121,83 +84,83 @@ graph LR
   - `file <filename>`: Describes file content type
   - `stat <filename>`: Detailed file metadata including inode
 
-- **Navigating the Filesystem:**
-  - `cd <dir>`: Change directory
-  - `ls`: List directory contents
-  - `pwd`: Print working directory
-  - `tree`: Visualize directory structure (may need to install)
+## Navigating: Paths & Hidden Files
+- **Absolute Paths:** Full from / (e.g., /home/linuxthefinalboss/docs.txt).
+- **Relative Paths:** From current dir (e.g., ~/docs.txt or ../docs.txt).
+- **Hidden:** Dot-prefixed (.bashrc)—`ls -a` reveals; `find . -name ".*"` hunts.
 
-- **Absolute vs Relative Paths:**
-  - Absolute: Starts from `/` (e.g., `/home/user/file.txt`)
-  - Relative: Based on current directory (e.g., `../file.txt`)
+**Commands:** `cd /etc`; `pwd`; `ls -la /home`; `tree -L 2 ~` (install tree if needed).
+## Symbolic vs. Hard Links: The Twin Files
+Links let files "point" elsewhere—key for backups and configs.
 
-- **Hidden Files:**
-  - Files starting with `.` are hidden (e.g., `.bashrc`). Use `ls -a` to view.
+- **Symbolic (Soft) Links:** Like shortcuts—point to path. Break if target gone. Cross FS. `ln -s target link`.
+- **Hard Links:** Extra names for same data (same inode). Delete only when all gone. Same FS. `ln target link`.
 
-- **Best Practices:**
-  - Use symbolic links for flexibility (e.g., config files, shared resources), but avoid circular links.
-  - Use hard links for backup/versioning within the same filesystem.
-  - Do not modify files in `/bin`, `/sbin`, `/lib`, `/usr` unless necessary.
-  - Store personal files in `/home/<username>`.
+| Feature | Symbolic Link | Hard Link |
+|---------|---------------|-----------|
+| Command | `ln -s target link` | `ln target link` |
+| Inode | New (points to path) | Same as original |
+| Cross-FS | Yes | No |
+| Dangling | Yes (if target deleted) | No (data persists) |
+| Dirs | Yes | No |
+| Use Case | Config aliases (/etc/nginx/sites-available → enabled) | Version backups (multiple names for one file) |
 
-## Sample Exercises
-1. List all directories in the root (`/`) and describe their purpose and category.
-2. Use `tree` to visualize your home directory structure.
-3. Find and display all hidden files in your home directory.
-4. Explain the difference between `/etc/passwd` and `/etc/shadow`.
-5. Create a symbolic link and a hard link for a file. Show the difference.
-6. Use `file` and `stat` to inspect different file types.
-7. Explain the difference between symbolic and hard links, and give practical use cases for each.
+```mermaid
+graph LR
+    A[original.txt<br/>inode: 12345] 
+    B[hardlink.txt<br/>inode: 12345]
+    C[symlink.txt<br/>inode: 67890 → original.txt]
+    
+    A -.-> D[Shared Data]
+    B -.-> D
+    C --> A
+    
+    style A fill:#bfb
+    style B fill:#bfb
+    style C fill:#fbb
+    style D fill:#fff,stroke-dasharray: 5 5
+```
 
+**Test It:** `echo "Hi" > file; ln -s file sym; ln file hard; ls -li` (sym has new inode).
 
+-----------------------
+## Hands-on Exercises & Lab
+### Part 1: Root Hierarchy & Purposes
+1. **Exercise:** `ls -l /`—list all root directories. For each key one (e.g., /bin, /etc, /home, /var, /usr, /tmp), run `ls <dir>` and describe its purpose/category (e.g., /bin: essential binaries).
+2. **Question:** What's in /boot? Why essential for boot (from Day 2)?
 
-## Solutions
-1. **Root directory contents:**
-   ```bash
-   ls -l /
-   ```
-   - `/bin` - Essential binaries (ls, cp, mv)
-   - `/etc` - Configuration files
-   - `/home` - User directories
-   - `/var` - Variable data (logs, mail)
-   - `/usr` - User programs and libraries
-   - `/tmp` - Temporary files
+### Part 2: Visualize Structure & Hidden Files
+1. Install if needed: `sudo apt install tree -y`.
+2. **Exercise:** `tree -L 2 /` (root with 2 levels); `tree ~` (home structure). Then `ls -la ~` to find/display all hidden files—list 3 examples (e.g., .bashrc).
+3. **Question:** How do hidden files like .ssh help in DevOps (secure keys)?
 
-2. **Visualize directory structure:**
-   ```bash
-   tree ~          # Home directory
-   tree -L 2 /     # Root with 2 levels
-   ```
+### Part 3: File Types & Inspection
+1. `ls -l /`—spot types (d for dirs, l for links).
+2. **Exercise:** Use `file` and `stat` to inspect: `file /bin/ls /etc/passwd /dev/sda` (types); `stat /bin/ls` (details). Explain /etc/passwd vs. /etc/shadow (user info vs. hashed passwords).
+3. **Question:** Why device files like /dev/sda as files? (Uniform handling—e.g., dd for backups.)
 
-3. **Find hidden files:**
-   ```bash
-   ls -la ~                    # List all including hidden
-   find ~ -name ".*" -type f   # Find hidden files
-   ```
+### Part 4: Links Creation & Differences
+1. `echo "Hello World" > original.txt`.
+2. **Exercise:** `ln -s original.txt symlink.txt` (sym); `ln original.txt hardlink.txt` (hard); `ls -li *.txt` (compare inodes). Delete original → test `cat symlink.txt` (broken?) vs. `cat hardlink.txt` (works?).
+3. **Question:** Practical use cases: Sym for configs (easy swap); hard for backups (space-saving)—when each?
 
-4. **System files comparison:**
-   - `/etc/passwd` - User account information (username, UID, home directory)
-   - `/etc/shadow` - Encrypted passwords and password policies
+### Part 5: Paths, Navigation, & Hunt
+1. `cd /var/log` → `pwd` (absolute).
+2. **Exercise:** Relative nav: `cd ..` → `cd log` back; `find ~ -name ".*" -type f` (all hidden files). Use absolute/relative to create a file in /tmp/lab via cd.
+3. **Question:** Absolute paths for scripts? (No cd surprises.)
 
-5. **Links demonstration:**
-   ```bash
-   echo "Hello World" > original.txt
-   ln -s original.txt symlink.txt     # Symbolic link
-   ln original.txt hardlink.txt       # Hard link
-   ls -li *.txt                       # Compare inodes
-   ```
+### Part 6: Challenge - Full Workflow
+1. **Exercise:** In /tmp: mkdir lab → echo "test" > lab/file.txt → sym/hard links → `du -sh /*` (sizes); inspect /proc (virtual? `cat /proc/version`).
+2. **Question:** Troubleshoot broken symlink: How detect/fix? (ls -l spots; recreate.)
 
-6. **File type inspection:**
-   ```bash
-   file /bin/ls        # Binary executable
-   file /etc/passwd    # ASCII text
-   file /dev/sda       # Block device
-   stat original.txt   # Detailed file info
-   ```
+### Solutions
+1. **Root:** `ls -l /` shows; /bin (essentials: ls, cp, mv—category: binaries); /etc (configs); /home (users); /var (variable: logs, mail); /usr (user programs/libs); /tmp (temp). /boot: kernels for startup.
+2. **Viz/Hidden:** tree -L 2 / roots tree; ls -la ~ lists .bashrc, .profile, .ssh—hidden for configs/keys.
+3. **Types:** file: /bin/ls (ELF binary), /etc/passwd (ASCII text), /dev/sda (block device); stat shows inode. /etc/passwd: user info (UID, home); /etc/shadow: passwords (secure split).
+4. **Links:** sym: ln -s (new inode); hard: ln (same inode). Delete original: sym dangles (cat fails); hard works (data linked). Sym: aliases; hard: multi-version files.
+5. **Paths:** Abs: full (/home/file); rel: current (file or ../file)—find hunts hidden. Scripts prefer abs for reliability.
+6. **Challenge:** du skips /proc (virtual); broken: ls -l (→ target), find -L (locate), ln -sf (fix/recreate).
 
-7. **Link differences:**
-   - **Symbolic links:** Point to file path, can cross filesystems, break if target deleted
-   - **Hard links:** Point to same inode, same filesystem only, file persists until all links removed
 
 ## Completion Checklist
 - [ ] Can navigate filesystem using cd, ls, pwd
@@ -226,29 +189,48 @@ ln target linkname     # Create hard link
 readlink linkname      # Show link target
 ```
 
-## Sample Interview Questions
-1. Explain the Linux filesystem hierarchy and the purpose of key directories.
-2. What is the difference between /bin and /usr/bin?
-3. What are the different file types in Linux? How can you identify them?
-4. Explain the difference between a symbolic link and a hard link. When would you use each?
-5. How do you find all hidden files in a directory?
-6. What is the purpose of the /proc and /sys directories?
-7. How do you check the inode number of a file? Why is it important?
-8. What are device files and where are they located?
-9. What is the difference between absolute and relative paths?
-10. How would you troubleshoot a broken symlink?
-
-## Interview Question Answers
-1. **Filesystem Hierarchy:** Starts at `/` with standardized directories: `/bin` (binaries), `/etc` (configs), `/home` (users), `/var` (variable data)
-2. **bin vs usr/bin:** `/bin` contains essential system binaries; `/usr/bin` has user applications and non-essential binaries
-3. **File Types:** Regular files (-), directories (d), symlinks (l), device files (c/b), pipes (p), sockets (s). Use `ls -l` or `file` command
-4. **Links:** Symlinks point to file paths, can cross filesystems; hard links share same inode, same filesystem only
-5. **Hidden Files:** Use `ls -a` or `find . -name ".*"` to show files starting with dot
-6. **Virtual Filesystems:** `/proc` shows process/kernel info; `/sys` exposes kernel and hardware information
-7. **Inodes:** Use `ls -i` or `stat`; inodes store file metadata and are crucial for hard links and file system operations
-8. **Device Files:** Located in `/dev`, represent hardware devices (e.g., `/dev/sda` for disks, `/dev/tty` for terminals)
-9. **Paths:** Absolute paths start with `/` (full path); relative paths are based on current directory
-10. **Broken Symlinks:** Use `ls -l` to identify (shows target), `find -L` to locate, recreate or fix target path
-
 ## Next Steps
 Proceed to [Day 4: Linux Boot Process & Service Management](../Day_04/notes_and_exercises.md) to learn how Linux starts up and manages services.
+
+----------
+
+
+## Troubleshooting (Optional)
+Common filesystem hiccups — diagnose and fix like an SRE. Always start with `ls -l` or `pwd` to orient.
+
+### Permission Denied
+- **When:** Trying to edit /etc (root-owned) or access /root as user.
+- **Why:** Linux's multi-user security—files have owner/group (uid/gid) and perms (rwx for user/group/other).
+- **Fix Steps:**
+  1. Quick: `sudo <command>` (e.g., `sudo nano /etc/hosts`—elevates to root).
+  2. Change owner: `sudo chown linuxthefinalboss:linuxthefinalboss /path/file` (user:group).
+  3. Adjust perms: `sudo chmod 644 /path/file` (rw-r--r--: owner read/write, others read).
+- **Pro Tip:** `ls -l` shows perms (e.g., -rw-r--r--); `id` your user. In DevOps, use sudoers for non-root automation.
+
+### Broken Symlink
+- **When:** `cat link.txt` says "No such file"—link points to missing target.
+- **Why:** Target deleted/moved; symlinks are just paths, not data copies.
+- **Fix Steps:**
+  1. Detect: `ls -l link.txt` (shows lrwxrwxrwx → old/target); `readlink link.txt` (target path).
+  2. Check: `ls -l <target>` (exists?).
+  3. Fix: `ln -sf newtarget link.txt` (-f forces overwrite); or `rm link.txt; ln -s new link.txt`.
+- **Pro Tip:** `find / -type l -exec test ! -e {} \; -print` hunts all broken links. Use in scripts to clean configs.
+
+### No tree Command
+- **When:** `tree` not found—common on minimal installs.
+- **Why:** Not pre-installed; optional viz tool.
+- **Fix Steps:**
+  1. Install: `sudo apt update && sudo apt install tree -y` (Debian/Ubuntu).
+  2. Alt: `apt search tree` for options; or use `find . -type d | sort`.
+- **Pro Tip:** Tree great for docs—`tree -I 'node_modules' > structure.txt` excludes junk.
+
+### Inode Full (or Disk Space Issues)
+- **When:** `touch file` fails with "No space left"—but `df -h` shows space.
+- **Why:** Inodes (file metadata slots) exhausted; ext4 limits ~4B inodes.
+- **Fix Steps:**
+  1. Check: `df -i /` (inode % used); `df -h /` (blocks).
+  2. Clean: `sudo find /tmp -type f -delete` (temp files); `sudo journalctl --vacuum-time=1d` (logs).
+  3. Prevent: Use larger FS on resize (`resize2fs`); monitor with `ncdu /`.
+- **Pro Tip:** Rare in /home but hits /var/log—rotate logs (`logrotate`) for SRE hygiene.
+
+**General Debug Flow:** `strace <command>` traces syscalls; `echo $?` checks exit codes.
